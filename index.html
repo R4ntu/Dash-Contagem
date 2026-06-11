@@ -65,10 +65,13 @@
   }
   .upload-btn:hover { background: var(--sh-orange-light); }
   .upload-btn svg { flex-shrink: 0; }
+  .upload-btn.secondary { background: #fff; color: var(--sh-orange); border: 1.5px solid var(--sh-orange); }
+  .upload-btn.secondary:hover { background: var(--sh-orange-dim); }
+  .upload-btn:disabled { opacity:0.6; cursor:not-allowed; }
   #csvFileInput { display: none; }
   .file-info {
     font-size: 11px; color: var(--sh-muted);
-    max-width: 180px; overflow: hidden;
+    max-width: 220px; overflow: hidden;
     text-overflow: ellipsis; white-space: nowrap;
   }
   .file-info.loaded { color: var(--green); font-weight: 600; }
@@ -112,8 +115,23 @@
     text-transform: uppercase;
     letter-spacing: 1px;
   }
-  .header-right { display: flex; align-items: center; gap: 16px; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
   .last-update span { color: var(--sh-orange); font-weight: 600; }
+  .live-badge {
+    display:flex; align-items:center; gap:6px;
+    font-size: 11px; font-weight: 700;
+    padding: 4px 10px; border-radius: 20px;
+    background: var(--green-dim); color: var(--green);
+    white-space: nowrap;
+  }
+  .live-badge.off { background: rgba(0,0,0,0.05); color: var(--sh-muted); }
+  .live-badge .dot {
+    width:7px; height:7px; border-radius:50%;
+    background: var(--green); flex-shrink:0;
+    animation: pulse 1.6s infinite;
+  }
+  .live-badge.off .dot { background: var(--sh-muted); animation:none; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
 
   /* ── ACCURACY TABLE ── */
   .acc-table-wrap { overflow-x: auto; }
@@ -173,7 +191,7 @@
     box-shadow: 0 1px 4px rgba(0,0,0,0.04);
   }
   .filter-label { font-size: 11px; font-weight: 700; color: var(--sh-muted); text-transform: uppercase; letter-spacing: 1px; margin-right: 4px; }
-  .filter-group { display: flex; align-items: center; gap: 8px; }
+  .filter-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   select, input[type="date"] {
     background: var(--sh-card2);
     border: 1px solid var(--sh-border);
@@ -199,6 +217,7 @@
     color: var(--sh-muted);
     font-family: 'Barlow', sans-serif;
     transition: all 0.2s;
+    white-space: nowrap;
   }
   .filter-chip.active { background: var(--sh-orange); border-color: var(--sh-orange); color: #fff; }
   .clear-btn {
@@ -211,6 +230,7 @@
     cursor: pointer;
     font-family: 'Barlow', sans-serif;
     text-decoration: underline;
+    white-space: nowrap;
   }
 
   /* ── MAIN ── */
@@ -344,6 +364,7 @@
   }
   .pill-manual { background: rgba(77,166,255,0.15); color: var(--blue); }
   .pill-ob { background: rgba(180,77,255,0.15); color: var(--purple); }
+  .pill-other { background: rgba(0,0,0,0.07); color: var(--sh-muted); }
 
   /* stage badge */
   .stage-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
@@ -368,8 +389,6 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
   .loading-text { font-size: 14px; color: var(--sh-muted); font-weight: 600; }
-
-  /* status indicator */
 
   /* ── TOAST NOTIFICATION ── */
   .toast {
@@ -441,27 +460,21 @@
     </div>
   </div>
   <div class="header-right">
+    <div class="live-badge off" id="liveBadge"><span class="dot"></span><span id="liveBadgeText">Conectando…</span></div>
     <div class="file-info" id="fileInfo">Nenhum arquivo carregado</div>
     <div class="header-divider"></div>
     <div class="last-update">Atualizado: <span id="lastUpdateTime">–</span></div>
-    <input type="file" id="csvFileInput" accept=".csv" onchange="handleFileUpload(event)"/>
-    <button class="upload-btn" onclick="document.getElementById('csvFileInput').click()">
+    <button class="upload-btn secondary" id="refreshBtn" onclick="loadFromGoogleSheet(true)">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-        <polyline points="17 8 12 3 7 8"/>
-        <line x1="12" y1="3" x2="12" y2="15"/>
+        <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
       </svg>
-      Carregar CSV
+      Atualizar
     </button>
   </div>
 </div>
 
-<!-- DRAG & DROP OVERLAY -->
-<div class="drop-overlay" id="dropOverlay">
-  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#EE4D2D" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-  <div class="drop-overlay-text">Solte o CSV aqui</div>
-  <div style="font-size:14px;color:var(--sh-muted)">Arquivo .csv da planilha de contagem</div>
-</div>
+
 
 <!-- FILTERS -->
 <div class="filters-row">
@@ -476,17 +489,13 @@
   <div class="filter-group" id="sourceFilters">
     <span class="filter-label">Origem</span>
     <button class="filter-chip active" data-source="ALL" onclick="toggleSource(this)">Todos</button>
-    <button class="filter-chip" data-source="ManualCreation" onclick="toggleSource(this)">Manual</button>
-    <button class="filter-chip" data-source="OBPicking" onclick="toggleSource(this)">OB Picking</button>
+    <!-- chips dinâmicos inseridos via JS a partir da coluna 'Source From' -->
   </div>
   <div class="filter-sep"></div>
   <div class="filter-group" id="stageFilters">
     <span class="filter-label">Contagem</span>
     <button class="filter-chip active" data-stage="ALL" onclick="toggleStage(this)">Todas</button>
-    <button class="filter-chip" data-stage="1" onclick="toggleStage(this)">1ª</button>
-    <button class="filter-chip" data-stage="2" onclick="toggleStage(this)">2ª</button>
-    <button class="filter-chip" data-stage="3" onclick="toggleStage(this)">3ª</button>
-    <button class="filter-chip" data-stage="4" onclick="toggleStage(this)">4ª</button>
+    <!-- chips dinâmicos inseridos via JS a partir da coluna 'CC Task Stage' -->
   </div>
   <div class="filter-sep"></div>
   <div class="filter-group" id="diffFilters">
@@ -519,31 +528,17 @@
       </svg>
     </div>
     <div>
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:800;color:#1A1A1A;margin-bottom:6px">
-        Carregue o arquivo CSV
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:800;color:#1A1A1A;margin-bottom:6px" id="emptyTitle">
+        Conectando ao Google Sheets...
       </div>
-      <div style="font-size:14px;color:var(--sh-muted);max-width:360px;line-height:1.6">
-        Clique em <strong style="color:var(--sh-orange)">Carregar CSV</strong> no topo ou
-        arraste o arquivo <code>.csv</code> para qualquer área da tela.
+      <div style="font-size:14px;color:var(--sh-muted);max-width:380px;line-height:1.6" id="emptyDesc">
+        Aguarde enquanto buscamos os dados mais recentes da planilha.
       </div>
     </div>
-    <button onclick="document.getElementById('csvFileInput').click()" style="
-      background:var(--sh-orange); border:none; color:#fff;
-      padding:12px 28px; border-radius:8px; font-size:14px; font-weight:700;
-      cursor:pointer; font-family:'Barlow',sans-serif;
-      display:flex; align-items:center; gap:8px;
-    ">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-        <polyline points="17 8 12 3 7 8"/>
-        <line x1="12" y1="3" x2="12" y2="15"/>
-      </svg>
-      Selecionar arquivo CSV
-    </button>
-    <div style="font-size:11px;color:#CCC">Compatível com a exportação direta da planilha Shopee BRFPE1</div>
+    <div style="font-size:11px;color:#CCC">Conectado à planilha Shopee BRFPE1 · Google Sheets</div>
   </div>
 
-  <!-- DASHBOARD CONTENT (hidden until CSV loaded) -->
+  <!-- DASHBOARD CONTENT (hidden until data loaded) -->
   <div id="dashContent" style="display:none">
   <div class="kpi-grid">
     <div class="kpi-card orange">
@@ -687,100 +682,155 @@
 </div><!-- /main -->
 
 <script>
+// ─── CONFIG ──────────────────────────────────────────────────────────────────
+// URL do Apps Script Web App (termina em /exec) que retorna { data: [...] }
+const APPS_SCRIPT_URL = 'https://script.google.com/a/macros/shopee.com/s/AKfycbzXdcIUPNpbWs0ax1gGMQ8ZPqDZdWNmIQiPb4BObp9InegIhVHfFNDR4YBgVtjwhwa7PA/exec';
+const AUTO_REFRESH_MS = 5 * 60 * 1000; // re-busca automática a cada 5 min
+
 // ─── STATE ───────────────────────────────────────────────────────────────────
 let ALL_DATA = [];
 let charts   = {};
 let activeSource = 'ALL';
 let activeStage  = 'ALL';
 let activeDiff   = 'ALL';
+let autoRefreshTimer = null;
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
-  setupDragDrop();
-  // Não renderiza no init — espera o CSV ser carregado
+  loadFromGoogleSheet(false);
+  // re-busca automática periódica para manter "online"
+  autoRefreshTimer = setInterval(() => loadFromGoogleSheet(false), AUTO_REFRESH_MS);
 });
 
-// ─── FILE UPLOAD ─────────────────────────────────────────────────────────────
-function handleFileUpload(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  loadCSVFile(file);
-  // Reset input so same file can be reloaded
-  event.target.value = '';
-}
+// ─── GOOGLE SHEETS LOAD (via Apps Script Web App, retorna JSON) ─────────────
+function loadFromGoogleSheet(manual) {
+  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('COLE_AQUI') !== -1) {
+    setLiveBadge('error');
+    document.getElementById('emptyTitle').textContent = 'Configuração pendente';
+    document.getElementById('emptyDesc').innerHTML = 'Defina a constante <code>APPS_SCRIPT_URL</code> no código com a URL do seu Apps Script Web App (termina em <code>/exec</code>).';
+    return;
+  }
 
-function loadCSVFile(file) {
-  showLoading('Lendo arquivo CSV...');
-  const info = document.getElementById('fileInfo');
-  info.textContent = 'Carregando...';
-  info.className = 'file-info';
+  const refreshBtn = document.getElementById('refreshBtn');
+  if (manual) {
+    refreshBtn.disabled = true;
+    showLoading('Buscando dados da planilha...');
+  }
+  setLiveBadge('connecting');
 
-  Papa.parse(file, {
-    header: true,
-    skipEmptyLines: true,
-    worker: false,
-    complete: (res) => {
-      if (!res.data || res.data.length === 0) {
-        showToast('error', '❌ Arquivo vazio', 'O CSV não contém dados.');
-        hideLoading(); return;
+  // cache-buster para sempre pegar a versão mais recente
+  const url = APPS_SCRIPT_URL + (APPS_SCRIPT_URL.includes('?') ? '&' : '?') + '_=' + Date.now();
+
+  fetch(url)
+    .then(res => {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .then(json => {
+      if (refreshBtn) refreshBtn.disabled = false;
+      if (manual) hideLoading();
+
+      if (json.error) throw new Error(json.error);
+
+      const rows = json.data || [];
+      if (!rows.length) {
+        setLiveBadge('error');
+        if (manual) showToast('error', '❌ Planilha vazia', 'Nenhum dado retornado da planilha.');
+        return;
       }
-      ALL_DATA = res.data;
+
+      ALL_DATA = rows;
+      buildDynamicFilters(ALL_DATA);
 
       const el = document.getElementById('lastUpdateTime');
-      if (el) el.textContent = new Date().toLocaleTimeString('pt-BR') + ' · ' + res.data.length.toLocaleString('pt-BR') + ' registros';
+      if (el) el.textContent = new Date().toLocaleTimeString('pt-BR') + ' · ' + rows.length.toLocaleString('pt-BR') + ' registros';
 
-      info.textContent = file.name + '  (' + res.data.length.toLocaleString('pt-BR') + ' linhas)';
+      const info = document.getElementById('fileInfo');
+      info.textContent = 'Google Sheets (' + rows.length.toLocaleString('pt-BR') + ' linhas)';
       info.className = 'file-info loaded';
 
-      // Mostra dashboard, esconde empty state
       document.getElementById('emptyState').style.display  = 'none';
       document.getElementById('dashContent').style.display = 'block';
 
-      // Reset all filters on new load
-      activeSource = 'ALL'; activeStage = 'ALL'; activeDiff = 'ALL';
-      document.querySelectorAll('.filter-chip').forEach(b => {
-        const isAll = b.dataset.source==='ALL'||b.dataset.stage==='ALL'||b.dataset.diff==='ALL';
-        b.classList.toggle('active', isAll);
-      });
-      document.getElementById('dateFrom').value = '';
-      document.getElementById('dateTo').value   = '';
-
       applyFiltersAndRender();
-      showToast('success', '✅ CSV carregado!', res.data.length.toLocaleString('pt-BR') + ' registros prontos.');
-      hideLoading();
-    },
-    error: (err) => {
-      showToast('error', '❌ Erro ao ler CSV', err.message);
-      info.textContent = 'Erro ao carregar'; info.className = 'file-info';
-      hideLoading();
-    }
-  });
+      setLiveBadge('on');
+      if (manual) showToast('success', '✅ Atualizado!', rows.length.toLocaleString('pt-BR') + ' registros carregados da planilha.');
+    })
+    .catch(err => {
+      if (refreshBtn) refreshBtn.disabled = false;
+      if (manual) hideLoading();
+      setLiveBadge('error');
+      if (manual) {
+        showToast('error', '❌ Erro ao buscar planilha', String(err.message || err));
+      } else if (!ALL_DATA.length) {
+        document.getElementById('emptyTitle').textContent = 'Não foi possível conectar ao Google Sheets';
+        document.getElementById('emptyDesc').innerHTML = 'Verifique a implantação do Apps Script (acesso "Qualquer pessoa") e a URL configurada.';
+      }
+    });
 }
 
-// ─── DRAG & DROP ─────────────────────────────────────────────────────────────
-function setupDragDrop() {
-  const overlay = document.getElementById('dropOverlay');
-  let dragCount = 0;
+  const badge = document.getElementById('liveBadge');
+  const text  = document.getElementById('liveBadgeText');
+  if (state === 'on') {
+    badge.classList.remove('off');
+    text.textContent = 'Conectado · Google Sheets';
+  } else if (state === 'connecting') {
+    badge.classList.add('off');
+    text.textContent = 'Conectando…';
+  } else {
+    badge.classList.add('off');
+    text.textContent = 'Offline';
+  }
+}
 
-  document.addEventListener('dragenter', (e) => {
-    e.preventDefault();
-    if ([...e.dataTransfer.items].some(i => i.kind === 'file')) {
-      dragCount++;
-      overlay.classList.add('active');
-    }
+// ─── DYNAMIC FILTERS ─────────────────────────────────────────────────────────
+// Gera os botões de Origem e Contagem com base nos valores ÚNICOS realmente
+// presentes nas colunas 'Source From' e 'CC Task Stage' dos dados carregados.
+const STAGE_LABELS = { '1':'1ª','2':'2ª','3':'3ª','4':'4ª','5':'5ª','6':'6ª' };
+const SOURCE_LABELS = { 'ManualCreation':'Manual', 'OBPicking':'OB Picking' };
+
+function buildDynamicFilters(data) {
+  // ── Origem (Source From) ──
+  const sources = [...new Set(data.map(r => (r['Source From']||'').trim()).filter(Boolean))].sort();
+  const sourceWrap = document.getElementById('sourceFilters');
+  // mantém apenas o botão "Todos", remove os demais antigos
+  sourceWrap.querySelectorAll('.filter-chip:not([data-source="ALL"])').forEach(b => b.remove());
+  sources.forEach(src => {
+    const btn = document.createElement('button');
+    btn.className = 'filter-chip';
+    btn.dataset.source = src;
+    btn.textContent = SOURCE_LABELS[src] || src;
+    btn.onclick = () => toggleSource(btn);
+    sourceWrap.appendChild(btn);
   });
-  document.addEventListener('dragleave', () => {
-    dragCount--;
-    if (dragCount <= 0) { dragCount = 0; overlay.classList.remove('active'); }
+  // se a origem ativa não existe mais nos dados, volta para ALL
+  if (activeSource !== 'ALL' && !sources.includes(activeSource)) {
+    activeSource = 'ALL';
+  }
+  syncChipActive(sourceWrap, 'source', activeSource);
+
+  // ── Contagem (CC Task Stage) ──
+  const stages = [...new Set(data.map(r => String(r['CC Task Stage']||'').trim()).filter(Boolean))]
+    .sort((a,b) => (parseInt(a)||0) - (parseInt(b)||0));
+  const stageWrap = document.getElementById('stageFilters');
+  stageWrap.querySelectorAll('.filter-chip:not([data-stage="ALL"])').forEach(b => b.remove());
+  stages.forEach(st => {
+    const btn = document.createElement('button');
+    btn.className = 'filter-chip';
+    btn.dataset.stage = st;
+    btn.textContent = STAGE_LABELS[st] || (st + 'ª');
+    btn.onclick = () => toggleStage(btn);
+    stageWrap.appendChild(btn);
   });
-  document.addEventListener('dragover', (e) => e.preventDefault());
-  document.addEventListener('drop', (e) => {
-    e.preventDefault();
-    dragCount = 0;
-    overlay.classList.remove('active');
-    const file = e.dataTransfer.files[0];
-    if (file && file.name.endsWith('.csv')) loadCSVFile(file);
-    else if (file) showToast('error', '❌ Formato inválido', 'Apenas arquivos .csv são aceitos.');
+  if (activeStage !== 'ALL' && !stages.includes(activeStage)) {
+    activeStage = 'ALL';
+  }
+  syncChipActive(stageWrap, 'stage', activeStage);
+}
+
+function syncChipActive(wrap, dataAttr, activeVal) {
+  wrap.querySelectorAll('.filter-chip').forEach(b => {
+    b.classList.toggle('active', b.dataset[dataAttr] === activeVal);
   });
 }
 
@@ -805,10 +855,9 @@ function toggleDiff(btn) {
 }
 function clearFilters() {
   activeSource = 'ALL'; activeStage = 'ALL'; activeDiff = 'ALL';
-  document.querySelectorAll('.filter-chip[data-source="ALL"]').forEach(b => { b.classList.add('active'); });
-  document.querySelectorAll('.filter-chip:not([data-source="ALL"])').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.filter-chip[data-stage="ALL"]').forEach(b => b.classList.add('active'));
-  document.querySelectorAll('.filter-chip[data-diff="ALL"]').forEach(b => b.classList.add('active'));
+  document.querySelectorAll('#sourceFilters .filter-chip').forEach(b => b.classList.toggle('active', b.dataset.source==='ALL'));
+  document.querySelectorAll('#stageFilters .filter-chip').forEach(b => b.classList.toggle('active', b.dataset.stage==='ALL'));
+  document.querySelectorAll('#diffFilters .filter-chip').forEach(b => b.classList.toggle('active', b.dataset.diff==='ALL'));
   document.getElementById('dateFrom').value = '';
   document.getElementById('dateTo').value = '';
   applyFiltersAndRender();
@@ -818,8 +867,8 @@ function getFilteredData() {
   const df = document.getElementById('dateFrom').value;
   const dt = document.getElementById('dateTo').value;
   return ALL_DATA.filter(r => {
-    if (activeSource !== 'ALL' && r['Source From'] !== activeSource) return false;
-    if (activeStage  !== 'ALL' && r['CC Task Stage'] !== activeStage) return false;
+    if (activeSource !== 'ALL' && (r['Source From']||'').trim() !== activeSource) return false;
+    if (activeStage  !== 'ALL' && String(r['CC Task Stage']||'').trim() !== activeStage) return false;
     const diff = parseFloat(r['Diff Qty'] || 0);
     if (activeDiff === 'FALTA' && diff >= 0) return false;
     if (activeDiff === 'SOBRA' && diff <= 0) return false;
@@ -948,17 +997,21 @@ function renderAccChart(data) {
 // ─── SOURCE DONUT ────────────────────────────────────────────────────────────
 function renderSourceChart(data) {
   const counts = {};
-  data.forEach(r => { counts[r['Source From']] = (counts[r['Source From']]||0)+1; });
+  data.forEach(r => {
+    const key = (r['Source From']||'').trim() || '—';
+    counts[key] = (counts[key]||0)+1;
+  });
   const labels = Object.keys(counts);
   const values = labels.map(l => counts[l]);
+  const palette = ['#4DA6FF','#B44DFF','#0B9E57','#FFB800','#EE4D2D','#7B2FBE'];
 
   const ctx = document.getElementById('sourceChart');
   if (charts.source) charts.source.destroy();
   charts.source = new Chart(ctx, {
     type: 'doughnut',
     data: {
-      labels: labels.map(l => l === 'ManualCreation' ? 'Manual' : l),
-      datasets: [{ data: values, backgroundColor: ['#4DA6FF','#B44DFF'], borderWidth: 0, hoverOffset: 6 }]
+      labels: labels.map(l => SOURCE_LABELS[l] || l),
+      datasets: [{ data: values, backgroundColor: labels.map((_,i)=>palette[i%palette.length]), borderWidth: 0, hoverOffset: 6 }]
     },
     options: {
       ...chartDefaults(),
@@ -1000,18 +1053,20 @@ function renderDiffChart(data) {
 // ─── STAGE CHART ─────────────────────────────────────────────────────────────
 function renderStageChart(data) {
   const counts = {};
-  data.forEach(r => { counts[r['CC Task Stage']] = (counts[r['CC Task Stage']]||0)+1; });
-  const labels = Object.keys(counts).sort();
-  const stageColors = ['#EE4D2D','#FFB800','#4DA6FF','#B44DFF'];
-  const stageLabels = { '1':'1ª Contagem','2':'2ª Recontagem','3':'3ª Recontagem','4':'4ª Recontagem' };
+  data.forEach(r => {
+    const key = String(r['CC Task Stage']||'').trim() || '—';
+    counts[key] = (counts[key]||0)+1;
+  });
+  const labels = Object.keys(counts).sort((a,b) => (parseInt(a)||0) - (parseInt(b)||0));
+  const stageColors = ['#EE4D2D','#FFB800','#4DA6FF','#B44DFF','#0B9E57','#7B2FBE'];
 
   const ctx = document.getElementById('stageChart');
   if (charts.stage) charts.stage.destroy();
   charts.stage = new Chart(ctx, {
     type: 'doughnut',
     data: {
-      labels: labels.map(l => stageLabels[l] || l),
-      datasets: [{ data: labels.map(l=>counts[l]), backgroundColor: stageColors, borderWidth: 0, hoverOffset:6 }]
+      labels: labels.map(l => (STAGE_LABELS[l] ? STAGE_LABELS[l]+' Contagem' : l)),
+      datasets: [{ data: labels.map(l=>counts[l]), backgroundColor: labels.map((_,i)=>stageColors[i%stageColors.length]), borderWidth: 0, hoverOffset:6 }]
     },
     options: { ...chartDefaults(), cutout:'60%', plugins: { ...pluginDefaults(), legend:{display:true,position:'bottom',labels:{color:'#888',font:{size:10},boxWidth:10,padding:8}} } }
   });
@@ -1064,16 +1119,19 @@ function renderDivTable(data) {
     const badge = diff < 0
       ? `<span class="badge badge-falta">FALTA ${diff}</span>`
       : `<span class="badge badge-sobra">SOBRA +${diff}</span>`;
-    const src = r['Source From']==='ManualCreation'
-      ? '<span class="pill pill-manual">Manual</span>'
-      : '<span class="pill pill-ob">OB Pick</span>';
-    const stageColors = ['','#EE4D2D','#FFB800','#4DA6FF','#B44DFF'];
-    const sc = stageColors[parseInt(r['CC Task Stage'])||1];
+    const srcRaw = (r['Source From']||'').trim();
+    let src;
+    if (srcRaw === 'ManualCreation') src = '<span class="pill pill-manual">Manual</span>';
+    else if (srcRaw === 'OBPicking') src = '<span class="pill pill-ob">OB Pick</span>';
+    else src = `<span class="pill pill-other">${srcRaw || '—'}</span>`;
+    const stageColors = {'1':'#EE4D2D','2':'#FFB800','3':'#4DA6FF','4':'#B44DFF','5':'#0B9E57','6':'#7B2FBE'};
+    const stageKey = String(r['CC Task Stage']||'').trim();
+    const sc = stageColors[stageKey] || '#999';
     const loc = (r['Location ID']||'').replace('BRFPE1-','');
     return `<tr>
       <td>${r['CC Task Create Date']||'–'}</td>
       <td style="font-size:11px;font-family:monospace">${loc}</td>
-      <td><span class="stage-dot" style="background:${sc}"></span>${r['CC Task Stage']}ª</td>
+      <td><span class="stage-dot" style="background:${sc}"></span>${stageKey}ª</td>
       <td>${src}</td>
       <td style="text-align:right">${parseFloat(r['On Hand Qty']||0).toFixed(0)}</td>
       <td style="text-align:right">${parseFloat(r['Scanned Qty']||0).toFixed(0)}</td>
