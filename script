@@ -1,0 +1,72 @@
+/**
+ * APPS SCRIPT — Backend para o Cycle Count Dashboard
+ *
+ * COMO INSTALAR:
+ * 1. Na planilha, vá em Extensões > Apps Script
+ * 2. Apague o conteúdo padrão e cole este código
+ * 3. Salve (ícone de disquete)
+ * 4. Clique em "Implantar" > "Nova implantação"
+ * 5. Tipo: "App da Web"
+ * 6. Executar como: "Eu" (sua conta)
+ * 7. Quem pode acessar: "Qualquer pessoa"
+ * 8. Clique em "Implantar" e autorize as permissões
+ * 9. Copie a URL gerada (termina em /exec) e use no dashboard
+ *
+ * Sempre que editar este código, crie uma NOVA implantação
+ * (ou gerencie implantações > editar > nova versão) para a URL
+ * passar a refletir as mudanças.
+ */
+
+const SHEET_NAME = 'Página1'; // ajuste se o nome da aba for diferente (ex: 'Página1')
+
+function doGet(e) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  if (!sheet) {
+    return jsonResponse({ error: 'Aba "' + SHEET_NAME + '" não encontrada.' });
+  }
+
+  const values = sheet.getDataRange().getValues();
+  if (values.length < 2) {
+    return jsonResponse({ data: [] });
+  }
+
+  const headers = values[0].map(h => String(h).trim());
+  const rows = [];
+
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    // pula linhas totalmente vazias
+    if (row.every(cell => cell === '' || cell === null)) continue;
+
+    const obj = {};
+    headers.forEach((header, idx) => {
+      let val = row[idx];
+
+      // Datas: formata como string ISO (YYYY-MM-DD) ou
+      // como "YYYY-MM-DD HH:mm:ss" se houver componente de hora
+      if (val instanceof Date) {
+        val = formatDate(val);
+      }
+
+      obj[header] = val;
+    });
+    rows.push(obj);
+  }
+
+  return jsonResponse({ data: rows, updatedAt: new Date().toISOString() });
+}
+
+function formatDate(d) {
+  const tz = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone();
+  const hasTime = (d.getHours() !== 0 || d.getMinutes() !== 0 || d.getSeconds() !== 0);
+  if (hasTime) {
+    return Utilities.formatDate(d, tz, 'yyyy-MM-dd HH:mm:ss');
+  }
+  return Utilities.formatDate(d, tz, 'yyyy-MM-dd');
+}
+
+function jsonResponse(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
