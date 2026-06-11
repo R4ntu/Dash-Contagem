@@ -739,7 +739,7 @@ function loadFromGoogleSheet(manual) {
         return;
       }
 
-      ALL_DATA = rows;
+      ALL_DATA = rows.map(normalizeRow);
       buildDynamicFilters(ALL_DATA);
 
       const el = document.getElementById('lastUpdateTime');
@@ -1152,7 +1152,7 @@ function renderAccSummaryTable(data) {
     let d = '';
     try {
       const ft = r['CC Task Finish Time'];
-      d = ft ? ft.split(' ')[0] : r['CC Task Create Date'];
+      d = ft ? toDateOnly(ft).split(' ')[0] : r['CC Task Create Date'];
     } catch { d = r['CC Task Create Date']; }
     if (!d) return;
 
@@ -1193,6 +1193,29 @@ function renderAccSummaryTable(data) {
 }
 
 // ─── UTILS ───────────────────────────────────────────────────────────────────
+// ─── NORMALIZAÇÃO DE LINHAS ──────────────────────────────────────────────────
+// O Apps Script pode retornar datas em ISO completo (2026-05-15T03:00:00.000Z).
+// O dashboard espera 'YYYY-MM-DD' em CC Task Create Date / Finish Time, e
+// CC Task Stage como string ('1','2',...).
+function toDateOnly(v) {
+  if (!v) return v;
+  const s = String(v);
+  return s.includes('T') ? s.split('T')[0] : s;
+}
+function normalizeRow(r) {
+  const out = { ...r };
+  if (out['CC Task Create Date']) out['CC Task Create Date'] = toDateOnly(out['CC Task Create Date']);
+  if (out['CC Task Finish Time']) {
+    // mantém timestamp completo p/ cálculo de tempo médio, mas garante string
+    out['CC Task Finish Time'] = String(out['CC Task Finish Time']);
+  }
+  if (out['CC Task Create Time']) out['CC Task Create Time'] = String(out['CC Task Create Time']);
+  if (out['CC Task Stage'] !== undefined && out['CC Task Stage'] !== null) {
+    out['CC Task Stage'] = String(out['CC Task Stage']).trim();
+  }
+  return out;
+}
+
 function setText(id, val) {
   const el = document.getElementById(id);
   if (el) el.textContent = val;
