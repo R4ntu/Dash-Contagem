@@ -684,7 +684,7 @@
 <script>
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
 // URL do Apps Script Web App (termina em /exec) que retorna { data: [...] }
-const APPS_SCRIPT_URL = 'COLE_AQUI_A_URL_DO_APPS_SCRIPT/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/a/macros/shopee.com/s/AKfycbx9BohKMiUWDpCgp6JWz3GduWXsrUp6yeP3It7drd3rf5mK29SVj2g3OmevXUDwcBjdow/exec';
 const AUTO_REFRESH_MS = 5 * 60 * 1000; // re-busca automática a cada 5 min
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
@@ -704,7 +704,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // ─── GOOGLE SHEETS LOAD (via Apps Script Web App, retorna JSON) ─────────────
 function loadFromGoogleSheet(manual) {
-  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('https://script.google.com/a/macros/shopee.com/s/AKfycbzXdcIUPNpbWs0ax1gGMQ8ZPqDZdWNmIQiPb4BObp9InegIhVHfFNDR4YBgVtjwhwa7PA/exec') !== -1) {
+  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('COLE_AQUI') !== -1) {
     setLiveBadge('error');
     document.getElementById('emptyTitle').textContent = 'Configuração pendente';
     document.getElementById('emptyDesc').innerHTML = 'Defina a constante <code>APPS_SCRIPT_URL</code> no código com a URL do seu Apps Script Web App (termina em <code>/exec</code>).';
